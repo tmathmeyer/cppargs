@@ -5,6 +5,7 @@
 #include "argparse.h"
 #include "gtest/gtest.h"
 
+using namespace argparse;
 char *CONST_BINARY = "bin";
 
 int main(int argc, char **argv) {

@@ -11,22 +11,20 @@
 #include <vector>
 #include <optional>
 
-
 // Macro for defining flags:
 // Flag(Example, "--flag", "-f", "long description")
-struct _FLAG_ {};
-#define Flag(name, _full, _simple, _desc) struct _F_##name : _FLAG_ { \
+#define Flag(name, _full, _simple, _desc) struct _F_##name : argparse::_FLAG_ { \
 	const std::string full = _full; \
 	const std::string simple = _simple; \
 	const std::string desc = _desc; \
 }
 
-
+// ALL MACROs BELOW THIS POINT ARE UNDEF'D AT THE END
 // Macro for defining an Argument parser:
 // Arg(Example, std::string, std::string)
 // Arg(Other, std::string, Example)
 #define Arg(name, ...) \
-	class name : public Argument_<_F_##name, ##__VA_ARGS__> {};
+	class name : public argparse::Argument_<_F_##name, ##__VA_ARGS__> {};
 
 
 // Macros for generating incomplete types for 
@@ -43,18 +41,63 @@ struct _FLAG_ {};
 	template<typename V, typename... V##s> \
 	struct sname<V, V##s...>
 
+// A macro for defining an integral converter / parser.
+#define convert_type(TYPE, conv) \
+	template<> \
+	struct convert<TYPE> { \
+		static converted<TYPE> c(strings vec) { \
+			strings rest(vec.begin()+1, vec.end()); \
+			try { \
+				return std::make_tuple(std::conv(vec[0]), rest); \
+			} catch(...) { \
+				EXCEPT("Could not convert \"" + vec[0] + "\" to a " + #TYPE); \
+			} \
+		} \
+		static std::string Stringify() { return #TYPE; } \
+	};
+#define convert_type_integral(TYPE) convert_type(TYPE, stoi)
+#define convert_type_floating(TYPE) convert_type(TYPE, stod)
 
-// Forward declare some recursively specialized types.
-RecursiveType(ShowType);
-RecursiveType(PrintHelp);
-RecursiveType(GroupParse);
+#define EXCEPT(message) \
+	throw TraceException(__FILE__, __LINE__, message)
 
+#define EXCEPT_CHAIN(prev, message) \
+	throw TraceException(prev, __FILE__, __LINE__, message)
+
+namespace argparse {
+namespace tuple_index {
+	template <std::size_t I>
+		struct index {};
+
+	template <char... Digits>
+	constexpr std::size_t parse() {
+		// convert to array so we can use a loop instead of recursion
+		char digits[] = {Digits...}; 
+
+		// straightforward number parsing code
+		auto result = 0u;
+		for (auto c : digits) {
+			result *= 10;
+			result += c - '0';
+		}
+
+		return result;
+	}
+} // namespace tuple_index
 
 // Some simple typedefs to keep code more sane.
 using strings = std::vector<std::string>;
 using nullarg_t = std::tuple<nullptr_t>;
 template<typename X>
 using converted = std::tuple<X, strings>;
+
+// Forward declare some recursively specialized types.
+RecursiveType(ShowType);
+RecursiveType(PrintHelp);
+RecursiveType(GroupParse);
+
+// Base struct for Flag type inheritance.
+struct _FLAG_ {};
 
 // An exception class for collecting nested errors during the parsing process
 class TraceException {
@@ -83,63 +126,10 @@ std::ostream& operator<< (std::ostream &out, TraceException const& data) {
 	return out;
 }
 
-#define EXCEPT(message) \
-	throw TraceException(__FILE__, __LINE__, message)
-
-#define EXCEPT_CHAIN(prev, message) \
-	throw TraceException(prev, __FILE__, __LINE__, message)
-
-
-
-namespace tuple_index {
-
-	template <std::size_t I>
-		struct index {};
-
-	template <char... Digits>
-	constexpr std::size_t parse() {
-		// convert to array so we can use a loop instead of recursion
-		char digits[] = {Digits...}; 
-
-		// straightforward number parsing code
-		auto result = 0u;
-		for (auto c : digits) {
-			result *= 10;
-			result += c - '0';
-		}
-
-		return result;
-	}
-}
-
 template <char... Digits>
 auto operator"" _i() {
 	return tuple_index::index<tuple_index::parse<Digits...>()>{};
 }
-
-
-
-
-
-
-
-// A macro for defining an integral converter / parser.
-#define convert_type(TYPE, conv) \
-	template<> \
-	struct convert<TYPE> { \
-		static converted<TYPE> c(strings vec) { \
-			strings rest(vec.begin()+1, vec.end()); \
-			try { \
-				return std::make_tuple(std::conv(vec[0]), rest); \
-			} catch(...) { \
-				EXCEPT("Could not convert \"" + vec[0] + "\" to a " + #TYPE); \
-			} \
-		} \
-		static std::string Stringify() { return #TYPE; } \
-	};
-#define convert_type_integral(TYPE) convert_type(TYPE, stoi)
-#define convert_type_floating(TYPE) convert_type(TYPE, stod)
-
 
 // Default integral parser, can handle any type
 // which has a functor: Name()->std::string
@@ -250,7 +240,6 @@ class AnyOrder {
 				return std::get<I>(this->wrapped);
 			}
 };
-
 
 template<typename F, typename ...R>
 struct TMagic {
@@ -381,7 +370,6 @@ convert_type_integral(long);
 convert_type_floating(double);
 convert_type_floating(float);
 
-
 // Create a recursive type parser.
 // TODO: switch this to the RecursiveType(...) macro
 template<typename ...X>
@@ -423,7 +411,6 @@ struct _parser_<F> {
 				std::get<1>(c));
 	}
 };
-
 
 // The untemplated Argument base class used for type erasure.
 class Argument {
@@ -481,7 +468,6 @@ class Argument_ : public Argument {
             }
 };
 
-
 // Recursive specialization converting type sequences
 // to strings.
 DefaultHandler(ShowType, T) {
@@ -489,6 +475,7 @@ DefaultHandler(ShowType, T) {
 		return convert<T>::Stringify();
 	}
 };
+
 RecursiveHandler(ShowType, T) {
 	static std::string NameTypes() {
 		return convert<T>::Stringify()
@@ -496,7 +483,6 @@ RecursiveHandler(ShowType, T) {
 			+ ShowType<Ts...>::NameTypes();
 	}
 };
-
 
 // Recursive specialization for finding the best
 // Argument subtype to parse.
@@ -507,6 +493,7 @@ DefaultHandler(GroupParse, T) {
 		return group;
 	}
 };
+
 RecursiveHandler(GroupParse, T) {
 	static Argument *parse(strings args) {
 		T *group = new T();
@@ -529,13 +516,13 @@ RecursiveHandler(GroupParse, T) {
 DefaultHandler(PrintHelp, T) {
 	static void PrintTypeHelp() { T().DisplayHelp(); }
 };
+
 RecursiveHandler(PrintHelp, T) {
 	static void PrintTypeHelp() {
 		T().DisplayHelp();
 		PrintHelp<Ts...>::PrintTypeHelp();
 	}
 };
-
 
 // Print function for an argument type.
 template<typename T, typename... P>
@@ -559,5 +546,16 @@ void DisplayHelp() {
 	PrintHelp<Types...>::PrintTypeHelp();
 }
 
+}; // namespace argparse
+
+// UNDEFINE ALL NON-IMPORTANT MACROS
+#undef RecursiveType
+#undef DefaultHandler
+#undef RecursiveHandler
+#undef convert_type
+#undef convert_type_integral
+#undef convert_type_floating
+#undef EXCEPT
+#undef EXCEPT_CHAIN
 
 #endif
