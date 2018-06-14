@@ -19,14 +19,13 @@
 	const std::string desc = _desc; \
 }
 
-// ALL MACROs BELOW THIS POINT ARE UNDEF'D AT THE END
 // Macro for defining an Argument parser:
 // Arg(Example, std::string, std::string)
 // Arg(Other, std::string, Example)
 #define Arg(name, ...) \
 	class name : public argparse::Argument_<_F_##name, ##__VA_ARGS__> {};
 
-
+// ALL MACROs BELOW THIS POINT ARE UNDEF'D AT THE END
 // Macros for generating incomplete types for 
 // recursive specialiazation.
 #define RecursiveType(sname) \
@@ -124,11 +123,6 @@ std::ostream& operator<< (std::ostream &out, TraceException const& data) {
 		out << l << std::endl;
 	}
 	return out;
-}
-
-template <char... Digits>
-auto operator"" _i() {
-	return tuple_index::index<tuple_index::parse<Digits...>()>{};
 }
 
 // Default integral parser, can handle any type

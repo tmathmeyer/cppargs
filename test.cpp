@@ -24,6 +24,11 @@ X parse(std::vector<std::string> inargs) {
     return *dynamic_cast<X *>(ParseArgs<X, Y...>(inargs.size() + 1, args));
 }
 
+template <char... Digits>
+auto operator"" _i() {
+	return argparse::tuple_index::index<tuple_index::parse<Digits...>()>{};
+}
+
 TEST(FlagsWorkAsExpected, CreateFlag) {
     Flag(Example, "--example", "-e", "An extended description of 'Example'");
     EXPECT_STREQ(_F_Example().full.c_str(), "--example");
