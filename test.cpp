@@ -206,5 +206,5 @@ TEST(ParserParamTest, TestNamedParameters) {
 
     std::ostringstream stream;
     DisplayHelp<Example>(stream);
-    ASSERT_EQ(stream.str(), "[--example | -e] FOO<int>, BAR<int>\nDescription\n\n");
+    ASSERT_EQ(stream.str(), "\033[1m-e, --example\033[0m FOO<int>, BAR<int>\n\tDescription\n\n");
 }

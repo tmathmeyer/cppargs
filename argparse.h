@@ -33,9 +33,6 @@
       std::string Name() { return std::string(#name) + "<" + argparse::convert<type>::Stringify() + ">"; } \
   };
 
-namespace argparse {
-};
-
 // ALL MACROs BELOW THIS POINT ARE UNDEF'D AT THE END
 // Macros for generating incomplete types for 
 // recursive specialiazation.
@@ -94,6 +91,26 @@ namespace argparse {
         return result;
       }
   } // namespace tuple_index
+
+  namespace format_helpers {
+    template<std::size_t tablen>
+      struct indentor {
+        static void write(std::ostream& s, std::string msg, int line_max) {
+          do {
+            size_t split_position = line_max - tablen - 1;
+            if (split_position >= msg.length()) {
+              s << "\t" << msg << "\n";
+              return;
+            }
+            while (msg[split_position] != ' ') {
+              split_position--;
+            }
+            s << "\t" << msg.substr(0, split_position) << "\n";
+            msg = msg.substr(split_position+1, msg.length());
+          } while(msg.length() > 0);
+        }
+      };
+  } // namespace format_helpers
 
   // Some simple typedefs to keep code more sane.
   using strings = std::vector<std::string>;
@@ -464,9 +481,15 @@ namespace argparse {
         }
 
         void DisplayHelp(std::ostream& s) {
-          s << "[" << T().full << " | " << T().simple << "] ";
-          s << ShowType<P...>::NameTypes() << std::endl;
-          s << T().desc << std::endl << std::endl;
+          std::string BOLD = "\033[1m";
+          std::string NORM = "\033[0m";
+          s << BOLD;
+          if (T().simple.length()) { s << T().simple; }
+          if (T().simple.length() && T().full.length()) { s << ", "; }
+          if (T().full.length()) { s << T().full; }
+          s << NORM << " " << ShowType<P...>::NameTypes() << "\n";
+          format_helpers::indentor<8>::write(s, T().desc, 80);
+          s << "\n";
         }
 
         void EnsureNoRemainingArguments() override {
@@ -574,7 +597,6 @@ namespace argparse {
     void DisplayHelp(std::ostream& s) {
       PrintHelp<Types...>::PrintTypeHelp(s);
     }
-
 
 }; // namespace argparse
 
