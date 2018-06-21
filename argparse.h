@@ -25,6 +25,17 @@
 #define Arg(name, ...) \
   class name : public argparse::Argument_<_F_##name, ##__VA_ARGS__> {};
 
+
+// Macro for naming an instance of a type in an argument list, for clarity.
+#define NamedType(name, type) \
+  class name : public argparse::_NAMED_TYPE_<type> { \
+    public: \
+      std::string Name() { return std::string(#name) + "<" + argparse::convert<type>::Stringify() + ">"; } \
+  };
+
+namespace argparse {
+};
+
 // ALL MACROs BELOW THIS POINT ARE UNDEF'D AT THE END
 // Macros for generating incomplete types for 
 // recursive specialiazation.
@@ -117,7 +128,7 @@ namespace argparse {
         traceback.push_back(msg);
       }
   };
-
+  
   // Default integral parser, can handle any type
   // which has a functor: Name()->std::string
   // and a functor:       parse(std::vector<std::string>)->*
@@ -356,6 +367,25 @@ namespace argparse {
   // Create converters for a selection of floating point types
   convert_type_floating(double);
   convert_type_floating(float);
+  
+  template<typename T>
+  class _NAMED_TYPE_ {
+    public:
+      T wrapped_;
+      strings args_;
+      void parse(strings vec) {
+        converted<T> conv = convert<T>::c(vec);
+        args_ = std::get<1>(conv);
+        wrapped_ = std::get<0>(conv);
+      }
+      operator T const &() const { return wrapped_; }
+  };
+
+  template<typename T>
+  bool operator==(const _NAMED_TYPE_<T>& lhs, const T& rhs) {
+    return lhs.wrapped_ == rhs;
+  }
+
 
   // Create a recursive type parser.
   // TODO: switch this to the RecursiveType(...) macro
@@ -433,10 +463,10 @@ namespace argparse {
           }
         }
 
-        void DisplayHelp() {
-          std::cout << T().full << ", " << T().simple << " ";
-          std::cout << ShowType<P...>::NameTypes() << std::endl;
-          std::cout << T().desc << std::endl << std::endl;
+        void DisplayHelp(std::ostream& s) {
+          s << "[" << T().full << " | " << T().simple << "] ";
+          s << ShowType<P...>::NameTypes() << std::endl;
+          s << T().desc << std::endl << std::endl;
         }
 
         void EnsureNoRemainingArguments() override {
@@ -508,13 +538,13 @@ namespace argparse {
   // Recursive specialization for printing the help text
   // for a given set of Argument subtypes.
   DefaultHandler(PrintHelp, T) {
-    static void PrintTypeHelp() { T().DisplayHelp(); }
+    static void PrintTypeHelp(std::ostream& s) { T().DisplayHelp(s); }
   };
 
   RecursiveHandler(PrintHelp, T) {
-    static void PrintTypeHelp() {
-      T().DisplayHelp();
-      PrintHelp<Ts...>::PrintTypeHelp();
+    static void PrintTypeHelp(std::ostream &s) {
+      T().DisplayHelp(s);
+      PrintHelp<Ts...>::PrintTypeHelp(s);
     }
   };
 
@@ -537,8 +567,14 @@ namespace argparse {
   // Entry point function to display help text.
   template<typename ...Types>
     void DisplayHelp() {
-      PrintHelp<Types...>::PrintTypeHelp();
+      PrintHelp<Types...>::PrintTypeHelp(std::cout);
     }
+
+  template<typename ...Types>
+    void DisplayHelp(std::ostream& s) {
+      PrintHelp<Types...>::PrintTypeHelp(s);
+    }
+
 
 }; // namespace argparse
 

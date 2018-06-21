@@ -191,3 +191,20 @@ TEST(ParserParamTest, TestAnyOrderOptionalTupleType) {
     ASSERT_EQ(e[0_i][0_i].value(), e1);
     ASSERT_TRUE(e[0_i][1_i].has_value());
 }
+
+TEST(ParserParamTest, TestNamedParameters) {
+    Flag(Example, "--example", "-e", "Description");
+    NamedType(FOO, int);
+    NamedType(BAR, int);
+    Arg(Example, FOO, BAR);
+
+    Example a = parse<Example>({"--example", "1", "2"});
+    int foo = a[0_i];
+    int bar = a[1_i];
+    ASSERT_EQ(foo, 1);
+    ASSERT_EQ(bar, 2);
+
+    std::ostringstream stream;
+    DisplayHelp<Example>(stream);
+    ASSERT_EQ(stream.str(), "[--example | -e] FOO<int>, BAR<int>\nDescription\n\n");
+}
