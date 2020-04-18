@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 
 using namespace argparse;
-char *CONST_BINARY = "bin";
+char *CONST_BINARY = (char *)"bin";
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);

@@ -1,9 +1,9 @@
 load (
-    "//rules/core/CPP/build_defs.py",
+    "//rules/core/C/build_defs.py",
 )
 
-cpp_header (
-  name = 'argparse',
+c_header (
+  name = 'argparse_h',
   srcs = [
     "argparse.h"
   ],
@@ -14,15 +14,22 @@ cpp_binary (
   srcs = [
     'test.cpp'
   ],
-  depends = [
+  deps = [
+    '//googletest:googletest_headers',
     '//googletest:googletest',
-    ':argparse',
+    ':argparse_h',
   ],
-  linkdirs = [
+  include_dirs = [
     'googletest/googletest/include',
     'googletest/googletest',
   ],
   flags = [
     '-lpthread'
   ]
+)
+
+cpp_test (
+  name = 'argparse_test2',
+  srcs = ['test.cpp'],
+  deps = [':argparse_h']
 )

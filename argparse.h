@@ -598,6 +598,11 @@ namespace argparse {
       PrintHelp<Types...>::PrintTypeHelp(s);
     }
 
+  template <char... Digits>
+    auto operator"" _arg_index() {
+      return argparse::tuple_index::index<argparse::tuple_index::parse<Digits...>()>{};
+    }
+
 }; // namespace argparse
 
 // UNDEFINE ALL NON-IMPORTANT MACROS
