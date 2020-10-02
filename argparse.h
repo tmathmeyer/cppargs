@@ -114,7 +114,7 @@ namespace argparse {
 
   // Some simple typedefs to keep code more sane.
   using strings = std::vector<std::string>;
-  using nullarg_t = std::tuple<nullptr_t>;
+  using nullarg_t = std::tuple<std::nullptr_t>;
   template<typename X>
     using converted = std::tuple<X, strings>;
 
@@ -175,8 +175,8 @@ namespace argparse {
 
   // Converter for empty argument.
   template<>
-    struct convert<nullptr_t> {
-      static converted<nullptr_t> c(strings vec) {
+    struct convert<std::nullptr_t> {
+      static converted<std::nullptr_t> c(strings vec) {
         return std::make_tuple(nullptr, vec);
       }
       static std::string Stringify() {
